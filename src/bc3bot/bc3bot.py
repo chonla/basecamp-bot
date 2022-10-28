@@ -61,7 +61,6 @@ class Bot:
 
                     if resp_headers.get('status_code') == 200:
                         logging.debug('new messages detected ...')
-                        logging.debug(resp_json)
 
                         messages = list(filter(lambda m: m['created_at'] > last_message_timestamp, map(lambda m: {
                             'message': self._clean_html(m['content']),
