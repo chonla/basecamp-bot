@@ -27,35 +27,53 @@ def login():
 @app.route("/auth", methods=['GET'])
 def do_auth():
     args = request.args
-    verification_code = args.get('code')
-    url = f"https://launchpad.37signals.com/authorization/token?type=web_server&client_id={conf.get('bot.client_id')}&redirect_uri={conf.get('bot.redirect_uri')}&client_secret={conf.get('bot.client_secret')}&code={verification_code}"
-    headers = {
-        "User-Agent": f"{conf.get('bot.name')} ({conf.get('bot.version')})"
-    }
+    error = args.get('error')
+    if error == 'access_denied':
+        return f"""
+        <html>
+        <head>
+        <title>{conf.get('bot.name')} authorization</title>
+        <style type="text/css">
+        body {{ font-size: 14pt; }}
+        .inline-code {{ padding: 4px; border: 1px solid; }}
+        </style>
+        </head>
+        <body>
+        You have been REFUSED to authorize the bot <strong>{conf.get('bot.name')}</strong>. You may close this window now.<br>
+        If you want to authorize the bot, just run <span class="inline-code">bot authen</span>.
+        </body>
+        </html>
+        """
+    else:
+        verification_code = args.get('code')
+        url = f"https://launchpad.37signals.com/authorization/token?type=web_server&client_id={conf.get('bot.client_id')}&redirect_uri={conf.get('bot.redirect_uri')}&client_secret={conf.get('bot.client_secret')}&code={verification_code}"
+        headers = {
+            "User-Agent": f"{conf.get('bot.name')} ({conf.get('bot.version')})"
+        }
 
-    resp = requests.post(url=url, headers=headers)
-    resp_json = resp.json()
+        resp = requests.post(url=url, headers=headers)
+        resp_json = resp.json()
 
-    access_token = resp_json.get('access_token')
-    refresh_token = resp_json.get('refresh_token')
+        access_token = resp_json.get('access_token')
+        refresh_token = resp_json.get('refresh_token')
 
-    tokens = {
-        "access_token": access_token,
-        "refresh_token": refresh_token
-    }
+        tokens = {
+            "access_token": access_token,
+            "refresh_token": refresh_token
+        }
 
-    with open(".botrc", "w") as f:
-        yaml.safe_dump(tokens, f)
+        with open(".botrc", "w") as f:
+            yaml.safe_dump(tokens, f)
 
-    return f"""
-    <html>
-    <head>
-    <title>{conf.get('bot.name')} authorization</title>
-    <style type="text/css">
-    body {{ font-size: 14pt; }}
-    .inline-code {{ padding: 4px; border: 1px solid; }}
-    </style>
-    </head>
-    <body>You have been authorized on behalf of bot <strong>{conf.get('bot.name')}</strong>. You may close this window and run <span class="inline-code">bot run</span> to start the bot.</body>
-    </html>
-    """
+        return f"""
+        <html>
+        <head>
+        <title>{conf.get('bot.name')} authorization</title>
+        <style type="text/css">
+        body {{ font-size: 14pt; }}
+        .inline-code {{ padding: 4px; border: 1px solid; }}
+        </style>
+        </head>
+        <body>You have been authorized on behalf of bot <strong>{conf.get('bot.name')}</strong>. You may close this window and run <span class="inline-code">bot run</span> to start the bot.</body>
+        </html>
+        """
