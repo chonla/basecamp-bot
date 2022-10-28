@@ -28,6 +28,8 @@ class Bot:
         resp = self.whoami()
         self._identity = resp['accounts'][0]['id']
 
+        logging.debug(f"bot identity: {self._identity}")
+
     def whoami(self):
         url = f"https://launchpad.37signals.com/authorization.json"
         resp = self._get_resource(url)
@@ -57,24 +59,30 @@ class Bot:
                         headers['If-Modified-Since'] = last_etag
                     resp_json, resp_headers = self._get_resource(url, headers=headers, return_with_headers=True)
 
-                    logging.debug('new messages detected ...')
+                    if resp_headers.get('status_code') == 200:
+                        logging.debug('new messages detected ...')
+                        logging.debug(resp_json)
 
-                    messages = list(filter(lambda m: m['created_at'] > last_message_timestamp, map(lambda m: {
-                        'message': self._clean_html(m['content']),
-                        'created_at': datetime.strptime(m['created_at'], '%Y-%m-%dT%H:%M:%S.%f%z').timestamp()*1000,
-                        'sender': {
-                            'id': m['creator']['id'],
-                            'name': m['creator']['name'],
-                        },
-                    }, resp_json)))
+                        messages = list(filter(lambda m: m['created_at'] > last_message_timestamp, map(lambda m: {
+                            'message': self._clean_html(m['content']),
+                            'created_at': datetime.strptime(m['created_at'], '%Y-%m-%dT%H:%M:%S.%f%z').timestamp()*1000,
+                            'sender': {
+                                'id': m['creator']['id'],
+                                'name': m['creator']['name'],
+                            },
+                        }, resp_json)))
 
-                    last_etag = resp_headers.get('ETag')
-                    store.set_value('last-etag', last_etag)
-                    if len(messages) > 0:
-                        last_message_timestamp = messages[0]['created_at']
-                        store.set_value('last-timestamp', last_message_timestamp)
+                        last_etag = resp_headers.get('ETag')
+                        store.set_value('last-etag', last_etag)
+                        if len(messages) > 0:
+                            last_message_timestamp = messages[0]['created_at']
+                            store.set_value('last-timestamp', last_message_timestamp)
 
-                    logging.info(messages)
+                        logging.info(messages)
+
+                    elif resp_headers.get('status_code') == 404:
+                        logging.error(f'unable to enter the campfire {target_campfire_alias}. campfire may not exist or you have not invited bot to campfire yet.')
+                        return
                 except requests.JSONDecodeError:
                     pass
                 finally:
@@ -111,7 +119,7 @@ class Bot:
         elif method == 'get':
             resp = requests.get(url, headers=extended_headers)
         if return_with_headers:
-            return resp.json(), resp.headers
+            return resp.json(), dict(resp.headers, **{'status_code': resp.status_code})
         return resp.json()
 
     def _clean_html(self, html_text: str) -> str:
