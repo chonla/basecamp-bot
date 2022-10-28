@@ -9,7 +9,7 @@ import yaml
 class Config:
     """Config
 
-    An bot configuration.
+    A bot configuration.
     """
     def __init__(self, yaml_file: str = ''):
         """___init___

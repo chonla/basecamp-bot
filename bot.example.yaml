@@ -1,2 +1,15 @@
+log_level: DEBUG
 bot:
   name: BaseCamp Bot
+  version: v1.0
+  client_id: client-id from app registration
+  client_secret: client-secret from app registration
+  redirect_uri: redirection url for OAuth2
+  poll_interval: campfire polling interval
+campfires:
+  room_key:
+    project_id: project-id from basecamp
+    campfire_id: campfire-id from basecamp
+  another_room_key:
+    project_id: project-id from basecamp
+    campfire_id: campfire-id from basecamp
