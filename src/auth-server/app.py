@@ -39,8 +39,8 @@ def do_auth():
         </style>
         </head>
         <body>
-        You have been REFUSED to authorize the bot <strong>{conf.get('bot.name')}</strong>. You may close this window now.<br>
-        If you want to authorize the bot, just run <span class="inline-code">bot authen</span>.
+        <p>You have been REFUSED to authorize the bot <strong>{conf.get('bot.name')}</strong>. You may close this window now.</p>
+        <p>If you want to authorize the bot, just run <span class="inline-code">make authen</span>.</p>
         </body>
         </html>
         """
@@ -74,6 +74,6 @@ def do_auth():
         .inline-code {{ padding: 4px; border: 1px solid; }}
         </style>
         </head>
-        <body>You have been authorized on behalf of bot <strong>{conf.get('bot.name')}</strong>. You may close this window and run <span class="inline-code">bot run</span> to start the bot.</body>
+        <body><p>You have been authorized on behalf of bot <strong>{conf.get('bot.name')}</strong>. You may close this window and run <span class="inline-code">make run</span> to start the bot.</p></body>
         </html>
         """
