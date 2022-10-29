@@ -35,11 +35,20 @@ class Bot:
         self._hooks = {
             hook.Hook.NEW_MESSAGE: [],
         }
+        self._stats = {
+            "triggered": 0,
+            "messages_sent": 0
+        }
 
     def whoami(self):
         url = f"https://launchpad.37signals.com/authorization.json"
         resp = self._get_resource(url)
         return resp
+
+    def print_stats(self):
+        logging.info("summary")
+        logging.info(f"bot triggered: {self._stats['triggered']}")
+        logging.info(f"messages sent by bot: {self._stats['messages_sent']}")
 
     def add_hook(self, event_key: hook.Hook, callback: Callable):
         if event_key not in self._hooks:
@@ -69,6 +78,7 @@ class Bot:
                 try:
                     if h.interrupted:
                         logging.info("interruption detected. exiting ...")
+                        self.print_stats()
                         return
 
                     if last_etag != "":
@@ -142,6 +152,7 @@ class Bot:
                             self._dispatch_hook(
                                 hook.Hook.NEW_MESSAGE, new_messages_event_params
                             )
+                            self._stats["triggered"] = self._stats["triggered"] + len(messages)
 
                     elif resp_headers.get("status_code") == 404:
                         logging.error(
@@ -163,6 +174,7 @@ class Bot:
         url = self._campfire_url(target_campfire_project_id, target_campfire_chat_id)
         data = {"content": message}
         resp = self._post_resource(url, data)
+        self._stats["messages_sent"] = self._stats["messages_sent"] + 1
         return resp
 
     def _campfire_url(self, project_id: str, chat_id: str) -> str:
