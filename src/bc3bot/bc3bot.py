@@ -5,12 +5,13 @@ The bot.
 
 import re
 from time import sleep
+from typing import Callable
 import requests
 import logging
 from datetime import datetime
 
 
-from . import config, session, graceful_interrupt_handler
+from . import config, session, graceful_interrupt_handler, hook
 
 
 class Bot:
@@ -30,10 +31,21 @@ class Bot:
 
         logging.debug(f"bot identity: {self._identity}")
 
+        self._hooks = {
+            hook.Hook.NEW_MESSAGE: [],
+        }
+
     def whoami(self):
         url = f"https://launchpad.37signals.com/authorization.json"
         resp = self._get_resource(url)
         return resp
+
+    def add_hook(self, event_key: hook.Hook, callback: Callable):
+        if event_key not in self._hooks:
+            logging.error(f"hook {event_key} does not support")
+            return
+
+        self._hooks[event_key].append(callback)
 
     def enter_campfire(self, target_campfire_alias: str):
         logging.info(f"entering campfire {target_campfire_alias}")
@@ -101,7 +113,11 @@ class Bot:
                             last_message_timestamp = messages[0]["created_at"]
                             store.set_value("last-timestamp", last_message_timestamp)
 
-                        logging.info(messages)
+                        new_messages_event_params = {
+                            "campfire_alias": target_campfire_alias,
+                            "messages": messages
+                        }
+                        self._dispatch_hook(hook.Hook.NEW_MESSAGE, new_messages_event_params)
 
                     elif resp_headers.get("status_code") == 404:
                         logging.error(
@@ -178,3 +194,11 @@ class Bot:
     def _clean_html(self, html_text: str) -> str:
         regex = re.compile(r"<[^>]+>")
         return regex.sub("", html_text)
+
+    def _dispatch_hook(self, event_key: hook.Hook, params: any):
+        if event_key not in self._hooks:
+            logging.error(f"hook {event_key} does not support")
+            return
+        
+        for hook in self._hooks[event_key]:
+            hook(self, params)
