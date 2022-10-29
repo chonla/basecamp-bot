@@ -10,7 +10,16 @@ from bc3bot import bc3bot, hook
 
 
 def new_messages_event_callback(bot_instance: bc3bot.Bot, params: any):
-    print(params)
+    # examples
+    message = params["messages"][0]["message"]
+    response_message = "จ๋า ว่ายังไงจ๊ะ"
+    if message == "วันนี้อากาศดีไหม":
+        response_message = "อากาศดีเฟร่อ บอกเลย"
+    elif message == "กินอะไรดี":
+        response_message = "ส้มตำไหมจ๊ะ"
+    elif message == "แนะนำหนังหน่อย":
+        response_message = "ขั่วโมงนี้ต้อง black adam เลยจ้า"
+    bot_instance.send_message_to_campfire(response_message, params["campfire_alias"])
 
 
 if __name__ == '__main__':

@@ -28,6 +28,7 @@ class Bot:
         self._poll_interval = conf.get("bot.poll_interval", 5)
         resp = self.whoami()
         self._identity = resp["accounts"][0]["id"]
+        self._trigger = conf.get("bot.trigger", "บอท")
 
         logging.debug(f"bot identity: {self._identity}")
 
@@ -81,27 +82,48 @@ class Bot:
                         logging.debug("new messages detected ...")
 
                         messages = list(
-                            filter(
-                                # get only new messages
-                                lambda m: m["created_at"] > last_message_timestamp,
+                            map(
+                                # remove trigger from message
+                                lambda m: dict(
+                                    m,
+                                    **{
+                                        "message": m["message"][
+                                            len(self._trigger) :
+                                        ].strip()
+                                    },
+                                ),
                                 filter(
-                                    # get only messages from the others
-                                    lambda m: m["sender"]["id"] != self._identity,
-                                    map(
-                                        # get only needed detail
-                                        lambda m: {
-                                            "message": self._clean_html(m["content"]),
-                                            "created_at": datetime.strptime(
-                                                m["created_at"],
-                                                "%Y-%m-%dT%H:%M:%S.%f%z",
-                                            ).timestamp()
-                                            * 1000,
-                                            "sender": {
-                                                "id": m["creator"]["id"],
-                                                "name": m["creator"]["name"],
-                                            },
-                                        },
-                                        resp_json,
+                                    # get only new messages
+                                    lambda m: m["created_at"] > last_message_timestamp,
+                                    filter(
+                                        # get only triggering message
+                                        lambda m: m["message"]
+                                        .lower()
+                                        .startswith(self._trigger.lower()),
+                                        filter(
+                                            # get only messages from the others
+                                            lambda m: m["sender"]["id"]
+                                            != self._identity,
+                                            map(
+                                                # get only needed detail
+                                                lambda m: {
+                                                    "id": m["id"],
+                                                    "message": self._clean_html(
+                                                        m["content"]
+                                                    ),
+                                                    "created_at": datetime.strptime(
+                                                        m["created_at"],
+                                                        "%Y-%m-%dT%H:%M:%S.%f%z",
+                                                    ).timestamp()
+                                                    * 1000,
+                                                    "sender": {
+                                                        "id": m["creator"]["id"],
+                                                        "name": m["creator"]["name"],
+                                                    },
+                                                },
+                                                resp_json,
+                                            ),
+                                        ),
                                     ),
                                 ),
                             )
@@ -113,11 +135,13 @@ class Bot:
                             last_message_timestamp = messages[0]["created_at"]
                             store.set_value("last-timestamp", last_message_timestamp)
 
-                        new_messages_event_params = {
-                            "campfire_alias": target_campfire_alias,
-                            "messages": messages
-                        }
-                        self._dispatch_hook(hook.Hook.NEW_MESSAGE, new_messages_event_params)
+                            new_messages_event_params = {
+                                "campfire_alias": target_campfire_alias,
+                                "messages": messages,
+                            }
+                            self._dispatch_hook(
+                                hook.Hook.NEW_MESSAGE, new_messages_event_params
+                            )
 
                     elif resp_headers.get("status_code") == 404:
                         logging.error(
@@ -199,6 +223,6 @@ class Bot:
         if event_key not in self._hooks:
             logging.error(f"hook {event_key} does not support")
             return
-        
+
         for hook in self._hooks[event_key]:
             hook(self, params)
