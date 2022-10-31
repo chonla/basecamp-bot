@@ -24,6 +24,7 @@ class Bot:
 
         # Pre-evaluations
         self._access_token = auth.get("access_token")
+        self._name = conf.get('bot.trigger')
         self._useragent = f"{conf.get('bot.name')} ({conf.get('bot.version')})"
         self._poll_interval = conf.get("bot.poll_interval", 5)
         resp = self.whoami()
@@ -33,17 +34,23 @@ class Bot:
         logging.debug(f"bot identity: {self._identity}")
 
         self._hooks = {
+            hook.Hook.ENTER_CAMPFIRE: [],
             hook.Hook.NEW_MESSAGE: [],
+            hook.Hook.EXIT_CAMPFIRE: [],
         }
         self._stats = {
             "triggered": 0,
             "messages_sent": 0
         }
+        self._in_campfire = False
 
     def whoami(self):
         url = f"https://launchpad.37signals.com/authorization.json"
         resp = self._get_resource(url)
         return resp
+
+    def name(self):
+        return self._name
 
     def print_stats(self):
         logging.info("summary")
@@ -78,6 +85,11 @@ class Bot:
                 try:
                     if h.interrupted:
                         logging.info("interruption detected. exiting ...")
+                        self._dispatch_hook(
+                            hook.Hook.EXIT_CAMPFIRE, {
+                                "campfire_alias": target_campfire_alias
+                            }
+                        )
                         self.print_stats()
                         return
 
@@ -87,6 +99,14 @@ class Bot:
                     resp_json, resp_headers = self._get_resource(
                         url, headers=headers, return_with_headers=True
                     )
+
+                    if not self._in_campfire:
+                        self._in_campfire = True
+                        self._dispatch_hook(
+                            hook.Hook.ENTER_CAMPFIRE, {
+                                "campfire_alias": target_campfire_alias
+                            }
+                        )
 
                     if resp_headers.get("status_code") == 200:
                         logging.debug("new messages detected ...")
