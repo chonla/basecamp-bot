@@ -7,6 +7,7 @@ bot:
   client_secret: client-secret from app registration
   redirect_uri: redirection url for OAuth2
   poll_interval: campfire polling interval
+  identity: identity of creator, get from api response
 campfires:
   room_key:
     project_id: project-id from basecamp

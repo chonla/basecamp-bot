@@ -27,11 +27,12 @@ class Bot:
         self._name = conf.get('bot.trigger')
         self._useragent = f"{conf.get('bot.name')} ({conf.get('bot.version')})"
         self._poll_interval = conf.get("bot.poll_interval", 5)
-        resp = self.whoami()
-        self._identity = resp["accounts"][0]["id"]
+        self._identity = conf.get('bot.identity')
         self._trigger = conf.get("bot.trigger", "บอท")
-
         logging.debug(f"bot identity: {self._identity}")
+
+        resp = self.whoami()
+        self._impersonated_id = resp["accounts"][0]["id"]
 
         self._hooks = {
             hook.Hook.ENTER_CAMPFIRE: [],
@@ -198,7 +199,7 @@ class Bot:
         return resp
 
     def _campfire_url(self, project_id: str, chat_id: str) -> str:
-        return f"https://3.basecampapi.com/{self._identity}/buckets/{project_id}/chats/{chat_id}/lines.json"
+        return f"https://3.basecampapi.com/{self._impersonated_id}/buckets/{project_id}/chats/{chat_id}/lines.json"
 
     def _get_resource(
         self, url: str, headers: dict = {}, return_with_headers: bool = False
