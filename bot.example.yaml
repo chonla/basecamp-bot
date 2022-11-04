@@ -1,6 +1,7 @@
 log_level: DEBUG
 bot:
   name: BaseCamp Bot
+  nick: bot
   trigger: bot
   version: v1.0
   client_id: client-id from app registration

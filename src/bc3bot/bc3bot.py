@@ -24,10 +24,10 @@ class Bot:
 
         # Pre-evaluations
         self._access_token = auth.get("access_token")
-        self._name = conf.get('bot.trigger')
+        self._name = conf.get("bot.nick")
         self._useragent = f"{conf.get('bot.name')} ({conf.get('bot.version')})"
         self._poll_interval = conf.get("bot.poll_interval", 5)
-        self._identity = conf.get('bot.identity')
+        self._identity = conf.get("bot.identity")
         self._trigger = conf.get("bot.trigger", "บอท")
         logging.debug(f"bot identity: {self._identity}")
 
@@ -39,10 +39,7 @@ class Bot:
             hook.Hook.NEW_MESSAGE: [],
             hook.Hook.EXIT_CAMPFIRE: [],
         }
-        self._stats = {
-            "triggered": 0,
-            "messages_sent": 0
-        }
+        self._stats = {"triggered": 0, "messages_sent": 0}
         self._in_campfire = False
 
     def whoami(self):
@@ -52,6 +49,9 @@ class Bot:
 
     def name(self):
         return self._name
+
+    def trigger(self):
+        return self._trigger
 
     def print_stats(self):
         logging.info("summary")
@@ -87,9 +87,8 @@ class Bot:
                     if h.interrupted:
                         logging.info("interruption detected. exiting ...")
                         self._dispatch_hook(
-                            hook.Hook.EXIT_CAMPFIRE, {
-                                "campfire_alias": target_campfire_alias
-                            }
+                            hook.Hook.EXIT_CAMPFIRE,
+                            {"campfire_alias": target_campfire_alias},
                         )
                         self.print_stats()
                         return
@@ -104,57 +103,36 @@ class Bot:
                     if not self._in_campfire:
                         self._in_campfire = True
                         self._dispatch_hook(
-                            hook.Hook.ENTER_CAMPFIRE, {
-                                "campfire_alias": target_campfire_alias
-                            }
+                            hook.Hook.ENTER_CAMPFIRE,
+                            {"campfire_alias": target_campfire_alias},
                         )
 
                     if resp_headers.get("status_code") == 200:
                         logging.debug("new messages detected ...")
 
                         messages = list(
-                            map(
-                                # remove trigger from message
-                                lambda m: dict(
-                                    m,
-                                    **{
-                                        "message": m["message"][
-                                            len(self._trigger) :
-                                        ].strip()
-                                    },
-                                ),
+                            filter(
+                                # get only new messages
+                                lambda m: m["created_at"] > last_message_timestamp,
                                 filter(
-                                    # get only new messages
-                                    lambda m: m["created_at"] > last_message_timestamp,
-                                    filter(
-                                        # get only triggering message
-                                        lambda m: m["message"]
-                                        .lower()
-                                        .startswith(self._trigger.lower()),
-                                        filter(
-                                            # get only messages from the others
-                                            lambda m: m["sender"]["id"]
-                                            != self._identity,
-                                            map(
-                                                # get only needed detail
-                                                lambda m: {
-                                                    "id": m["id"],
-                                                    "message": self._clean_html(
-                                                        m["content"]
-                                                    ),
-                                                    "created_at": datetime.strptime(
-                                                        m["created_at"],
-                                                        "%Y-%m-%dT%H:%M:%S.%f%z",
-                                                    ).timestamp()
-                                                    * 1000,
-                                                    "sender": {
-                                                        "id": m["creator"]["id"],
-                                                        "name": m["creator"]["name"],
-                                                    },
-                                                },
-                                                resp_json,
-                                            ),
-                                        ),
+                                    # get only messages from the others
+                                    lambda m: m["sender"]["id"] != self._identity,
+                                    map(
+                                        # get only needed detail
+                                        lambda m: {
+                                            "id": m["id"],
+                                            "message": self._clean_html(m["content"]),
+                                            "created_at": datetime.strptime(
+                                                m["created_at"],
+                                                "%Y-%m-%dT%H:%M:%S.%f%z",
+                                            ).timestamp()
+                                            * 1000,
+                                            "sender": {
+                                                "id": m["creator"]["id"],
+                                                "name": m["creator"]["name"],
+                                            },
+                                        },
+                                        resp_json,
                                     ),
                                 ),
                             )
@@ -173,7 +151,9 @@ class Bot:
                             self._dispatch_hook(
                                 hook.Hook.NEW_MESSAGE, new_messages_event_params
                             )
-                            self._stats["triggered"] = self._stats["triggered"] + len(messages)
+                            self._stats["triggered"] = self._stats["triggered"] + len(
+                                messages
+                            )
 
                     elif resp_headers.get("status_code") == 404:
                         logging.error(
