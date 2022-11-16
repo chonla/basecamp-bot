@@ -7,7 +7,7 @@ from bc3bot import config, bc3bot
 import sys
 
 from bc3bot import bc3bot, hook
-from bc3bot.kb import tales
+from engine.responder.responder import Responder
 
 
 def enter_campfire_event_callback(bot_instance: bc3bot.Bot, params: any):
@@ -17,24 +17,29 @@ def exit_campfire_event_callback(bot_instance: bc3bot.Bot, params: any):
     bot_instance.send_message_to_campfire(f'{bot_instance.name()} ไปก่อนน้า..', params["campfire_alias"])
 
 def new_messages_event_callback(bot_instance: bc3bot.Bot, params: any):
-    # examples
+    responder = Responder(bot_instance)
     message = params["messages"][0]["message"]
-    response_message = ""
-    if message == bot_instance.trigger():
-        response_message = f"จ๋า เรียก{bot_instance.name()}ทำไมจ๊ะ"
-    elif message in ["วันนี้อากาศดีไหม", "วันนี้อากาศเป็นไง"]:
-        response_message = "อากาศดีเฟร่อ บอกเลย"
-    elif message in ["กินอะไรดี", "หิว"]:
-        response_message = "ส้มตำไหมจ๊ะ"
-    elif message in ["แนะนำหนังหน่อย", "ดูหนังอะไรดี"]:
-        response_message = "ขั่วโมงนี้ต้อง black adam เลยจ้า"
-    elif message in ["เล่านิทานให้ฟังหน่อย"]:
-        taler = tales.Tales()
-        response_message = taler.get_one()
+    room = params["campfire_alias"]
+    sender = params["messages"][0]["sender"]["name"]
+    responder.respond(message, room, sender)
+    # examples
+    # message = params["messages"][0]["message"]
+    # response_message = ""
+    # if message == bot_instance.trigger():
+    #     response_message = f"จ๋า เรียก{bot_instance.name()}ทำไมจ๊ะ"
+    # elif message in ["วันนี้อากาศดีไหม", "วันนี้อากาศเป็นไง"]:
+    #     response_message = "อากาศดีเฟร่อ บอกเลย"
+    # elif message in ["กินอะไรดี", "หิว"]:
+    #     response_message = "ส้มตำไหมจ๊ะ"
+    # elif message in ["แนะนำหนังหน่อย", "ดูหนังอะไรดี"]:
+    #     response_message = "ขั่วโมงนี้ต้อง black adam เลยจ้า"
+    # elif message in ["เล่านิทานให้ฟังหน่อย"]:
+    #     taler = tales.Tales()
+    #     response_message = taler.get_one()
 
     # respond only has something to say
-    if response_message != "":
-        bot_instance.send_message_to_campfire(response_message, params["campfire_alias"])
+    # if response_message != "":
+    #     bot_instance.send_message_to_campfire(response_message, params["campfire_alias"])
 
 
 if __name__ == '__main__':
