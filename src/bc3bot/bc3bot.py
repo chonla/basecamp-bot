@@ -21,6 +21,7 @@ class Bot:
 
         self._auth = auth
         self._conf = conf
+        self._log_level = log_level
 
         # Pre-evaluations
         self._access_token = auth.get("access_token")
@@ -41,6 +42,9 @@ class Bot:
         }
         self._stats = {"triggered": 0, "messages_sent": 0}
         self._in_campfire = False
+
+    def log_level(self):
+        return self._log_level
 
     def whoami(self):
         url = f"https://launchpad.37signals.com/authorization.json"
